@@ -9,7 +9,7 @@ Gem::Specification.new do |spec|
   spec.email         = ['sgwr_dts@yahoo.co.jp']
   spec.summary       = %q{Fluent plugin to output to DynamoDB.}
   spec.description   = %q{Fluent plugin to output to DynamoDB.}
-  spec.homepage      = ''
+  spec.homepage      = 'https://github.com/winebarrel/fluent-plugin-dynamodb-alt'
   spec.license       = 'MIT'
 
   spec.files         = `git ls-files -z`.split("\x0")
