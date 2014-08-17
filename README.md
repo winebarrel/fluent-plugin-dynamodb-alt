@@ -18,6 +18,8 @@ bundle exec rake install
   aws_sec_key ...
   region ap-northeast-1
   table_name any_table_nam
+  #timestamp_key time
+  #concurrency 1
 
   # see http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_PutItem.html#API_PutItem_RequestSyntax
   #expected id NULL,time LT ${time}
