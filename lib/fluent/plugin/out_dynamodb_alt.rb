@@ -14,9 +14,7 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
   config_param :aws_sec_key,          :string,  :default => nil
   config_param :region,               :string,  :default => nil
   config_param :table_name,           :string
-  config_param :timestamp_key,        :string,  :default => 'timestamp'
   config_param :concurrency,          :integer, :default => 1
-  config_param :use_update_item,      :bool,    :default => false
   config_param :expected,             :string,  :default => nil
   config_param :conditional_operator, :string,  :default => 'AND'
 
@@ -130,11 +128,6 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
 
     if @range_key and not record[@range_key]
       log.warn("Range Key '#{@range_key}' does not exist in the record: #{record.inspect}")
-      return false
-    end
-
-    if not record[@timestamp_key]
-      log.warn("Timestamp '#{@timestamp_key}' does not exist in the record: #{record.inspect}")
       return false
     end
 
