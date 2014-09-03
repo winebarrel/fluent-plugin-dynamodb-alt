@@ -13,8 +13,8 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
   config_param :aws_key_id,           :string,  :default => nil
   config_param :aws_sec_key,          :string,  :default => nil
   config_param :region,               :string,  :default => nil
-  config_param :table_name,           :string,  :default => nil
-  config_param :timestamp_key,        :string,  :default => 'time'
+  config_param :table_name,           :string
+  config_param :timestamp_key,        :string,  :default => 'timestamp'
   config_param :concurrency,          :integer, :default => 1
   config_param :use_update_item,      :bool,    :default => false
   config_param :expected,             :string,  :default => nil
@@ -32,10 +32,6 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
   def configure(conf)
     super
 
-    unless @table_name
-      raise ConfigError, "'#{@table_name}' is required"
-    end
-
     aws_opts = {}
 
     if @profile
@@ -49,9 +45,9 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
     aws_opts[:secret_access_key] = @aws_sec_key if @aws_sec_key
     aws_opts[:region] = @region if @region
 
-    Aws.config.update(aws_opts)
+    configure_aws(aws_opts)
 
-    client = Aws::DynamoDB::Client.new
+    client = create_client
     table = client.describe_table(:table_name => @table_name)
 
     table.table.key_schema.each do |attribute|
@@ -69,8 +65,6 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
       @expected = parse_expected(@expected)
       log.info("dynamodb_alt expected: #{@expected.inspect}")
     end
-  rescue => e
-    raise Fluent::ConfigError, e.message
   end
 
   def start
@@ -97,6 +91,14 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
   end
 
   private
+
+  def configure_aws(options)
+    Aws.config.update(options)
+  end
+
+  def create_client
+    Aws::DynamoDB::Client.new
+  end
 
   def put_record(record)
     if validate_record(record)

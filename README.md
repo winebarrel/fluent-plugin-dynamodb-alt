@@ -14,10 +14,10 @@ bundle exec rake install
 ```
 <match tag>
   type dynamodb_alt
-  aws_key_id ...
-  aws_sec_key ...
+  aws_key_id AKIAIOSFODNN7EXAMPLE
+  aws_sec_key  wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
   region ap-northeast-1
-  table_name any_table_nam
+  table_name my_table
   #timestamp_key time
   #concurrency 1
 
