@@ -14,6 +14,7 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
   config_param :aws_sec_key,          :string,  :default => nil
   config_param :region,               :string,  :default => nil
   config_param :table_name,           :string
+  config_param :timestamp_key,        :string
   config_param :concurrency,          :integer, :default => 1
   config_param :expected,             :string,  :default => nil
   config_param :conditional_operator, :string,  :default => 'AND'

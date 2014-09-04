@@ -29,6 +29,7 @@ describe Fluent::DynamodbAltOutput do
         aws_sec_key wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
         region ap-northeast-1
         table_name my_table
+        timestamp_key timestamp
         concurrency 2
         conditional_operator OR
       EOS
@@ -36,6 +37,7 @@ describe Fluent::DynamodbAltOutput do
       expect(driver.instance.aws_key_id          ).to eq 'AKIAIOSFODNN7EXAMPLE'
       expect(driver.instance.aws_sec_key         ).to eq 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY'
       expect(driver.instance.table_name          ).to eq 'my_table'
+      expect(driver.instance.timestamp_key       ).to eq 'timestamp'
       expect(driver.instance.concurrency         ).to eq 2
       expect(driver.instance.conditional_operator).to eq 'OR'
       expect(driver.instance.instance_variable_get(:@hash_key) ).to eq 'hash_key'
@@ -60,6 +62,7 @@ describe Fluent::DynamodbAltOutput do
       driver.configure(<<-EOS)
         type dynamodb_alt
         table_name my_table
+        timestamp_key timestamp
         expected timestamp GE 0,key LT 100
       EOS
 
@@ -85,6 +88,7 @@ describe Fluent::DynamodbAltOutput do
       driver.configure(<<-EOS)
         type dynamodb_alt
         table_name my_table
+        timestamp_key timestamp
         expected id NULL,timestamp LT ${ts},key EQ ${k}
       EOS
 
@@ -122,6 +126,7 @@ describe Fluent::DynamodbAltOutput do
         driver.configure(<<-EOS)
           type dynamodb_alt
           table_name my_table
+          timestamp_key timestamp
           expected key EQ val
         EOS
       }.to raise_error("Cannot parse the expected expression (key EQ val): 399: unexpected token at 'val]'")
@@ -145,6 +150,7 @@ describe Fluent::DynamodbAltOutput do
       driver.configure(<<-EOS)
         type dynamodb_alt
         table_name my_table
+        timestamp_key timestamp
         expected key1 EQ "str",key2 EQ 1
       EOS
 
