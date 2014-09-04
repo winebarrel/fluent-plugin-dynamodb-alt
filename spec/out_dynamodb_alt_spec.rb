@@ -1,5 +1,9 @@
 describe Fluent::DynamodbAltOutput do
-  context 'configure' do
+  let(:time) {
+    Time.parse('2014-09-01 01:23:45 UTC').to_i
+  }
+
+  context('configure') {
     it do
       driver = create_driver
       expect(driver.instance).to receive(:configure_aws).with(
@@ -98,5 +102,241 @@ describe Fluent::DynamodbAltOutput do
       expect(op2 ).to eq 'EQ'
       expect(val2.call('k' => '1')).to eq '1'
     end
-  end
+
+    it do
+      driver = create_driver
+      allow(driver.instance).to receive(:configure_aws)
+
+      allow(driver.instance).to receive(:create_client) {
+        client = double('client')
+        allow(client).to receive(:describe_table) {
+          Hashie::Mash.new(:table => {
+            :key_schema => [
+              {:key_type => 'HASH',  :attribute_name => 'hash_key'},
+            ]})
+        }
+        client
+      }
+
+      expect {
+        driver.configure(<<-EOS)
+          type dynamodb_alt
+          table_name my_table
+          expected key EQ val
+        EOS
+      }.to raise_error("Cannot parse the expected expression (key EQ val): 399: unexpected token at 'val]'")
+    end
+
+    it do
+      driver = create_driver
+      allow(driver.instance).to receive(:configure_aws)
+
+      allow(driver.instance).to receive(:create_client) {
+        client = double('client')
+        allow(client).to receive(:describe_table) {
+          Hashie::Mash.new(:table => {
+            :key_schema => [
+              {:key_type => 'HASH',  :attribute_name => 'hash_key'},
+            ]})
+        }
+        client
+      }
+
+      driver.configure(<<-EOS)
+        type dynamodb_alt
+        table_name my_table
+        expected key1 EQ "str",key2 EQ 1
+      EOS
+
+      expected = driver.instance.instance_variable_get(:@expected)
+      expect(expected).to eq [["key1", "EQ", "str"], ["key2", "EQ", 1]]
+    end
+  }
+
+  context('emit') {
+    before(:all) do
+      drop_table
+      create_table('(id STRING HASH) READ = 20 WRITE = 20')
+    end
+
+    before(:each) do
+      truncate_table
+    end
+
+    after(:all) do
+      drop_table
+    end
+
+    context('without condition') {
+      it do
+        run_driver do |d|
+          d.emit({'id' => '12345678-1234-1234-1234-123456789001', 'timestamp' => 1409534625001}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789002', 'timestamp' => 1409534625002}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789003', 'timestamp' => 1409534625003}, time)
+        end
+
+        expect(select_all).to match_array [
+          {"id"=>"12345678-1234-1234-1234-123456789001", "timestamp"=>1409534625001},
+          {"id"=>"12345678-1234-1234-1234-123456789002", "timestamp"=>1409534625002},
+          {"id"=>"12345678-1234-1234-1234-123456789003", "timestamp"=>1409534625003},
+        ]
+      end
+    }
+
+    context('with condition (1)') {
+      it do
+        run_driver(:expected => 'id NULL,timestamp LT ${timestamp}', :conditional_operator => 'OR') do |d|
+          expect(d.instance.log).not_to receive(:warn)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789001', 'timestamp' => 1409534625001}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789002', 'timestamp' => 1409534625002}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789003', 'timestamp' => 1409534625003}, time)
+        end
+
+        expect(select_all).to match_array [
+          {"id"=>"12345678-1234-1234-1234-123456789001", "timestamp"=>1409534625001},
+          {"id"=>"12345678-1234-1234-1234-123456789002", "timestamp"=>1409534625002},
+          {"id"=>"12345678-1234-1234-1234-123456789003", "timestamp"=>1409534625003},
+        ]
+
+        run_driver(:expected => 'id NULL,timestamp LT ${timestamp}', :conditional_operator => 'OR') do |d|
+          expect(d.instance.log).not_to receive(:warn)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789001', 'timestamp' => 1409534625004, 'key' => 'val'}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789002', 'timestamp' => 1409534625005, 'key' => 'val'}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789003', 'timestamp' => 1409534625006, 'key' => 'val'}, time)
+        end
+
+        expect(select_all).to match_array [
+          {"id"=>"12345678-1234-1234-1234-123456789001", "timestamp"=>1409534625004, 'key' => 'val'},
+          {"id"=>"12345678-1234-1234-1234-123456789002", "timestamp"=>1409534625005, 'key' => 'val'},
+          {"id"=>"12345678-1234-1234-1234-123456789003", "timestamp"=>1409534625006, 'key' => 'val'},
+        ]
+      end
+
+      it do
+        run_driver(:expected => 'id NULL,timestamp LT ${timestamp}', :conditional_operator => 'OR') do |d|
+          expect(d.instance.log).not_to receive(:warn)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789001', 'timestamp' => 1409534625001}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789002', 'timestamp' => 1409534625002}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789003', 'timestamp' => 1409534625003}, time)
+        end
+
+        expect(select_all).to match_array [
+          {"id"=>"12345678-1234-1234-1234-123456789001", "timestamp"=>1409534625001},
+          {"id"=>"12345678-1234-1234-1234-123456789002", "timestamp"=>1409534625002},
+          {"id"=>"12345678-1234-1234-1234-123456789003", "timestamp"=>1409534625003},
+        ]
+
+        run_driver(:expected => 'id NULL,timestamp LT ${timestamp}', :conditional_operator => 'OR') do |d|
+          expect(d.instance.log).to receive(:warn)
+            .with(%!The conditional request failed: {:table_name=>"#{TEST_TABLE_NAME}", :item=>{"id"=>"12345678-1234-1234-1234-123456789001", "timestamp"=>1409534625001, "key"=>"val"}, :expected=>{"id"=>{:comparison_operator=>"NULL"}, "timestamp"=>{:comparison_operator=>"LT", :attribute_value_list=>[1409534625001]}}, :conditional_operator=>"OR"}!)
+          expect(d.instance.log).to receive(:warn)
+            .with(%!The conditional request failed: {:table_name=>"#{TEST_TABLE_NAME}", :item=>{"id"=>"12345678-1234-1234-1234-123456789002", "timestamp"=>1409534625002, "key"=>"val"}, :expected=>{"id"=>{:comparison_operator=>"NULL"}, "timestamp"=>{:comparison_operator=>"LT", :attribute_value_list=>[1409534625002]}}, :conditional_operator=>"OR"}!)
+          expect(d.instance.log).to receive(:warn)
+            .with(%!The conditional request failed: {:table_name=>"#{TEST_TABLE_NAME}", :item=>{"id"=>"12345678-1234-1234-1234-123456789003", "timestamp"=>1409534625003, "key"=>"val"}, :expected=>{"id"=>{:comparison_operator=>"NULL"}, "timestamp"=>{:comparison_operator=>"LT", :attribute_value_list=>[1409534625003]}}, :conditional_operator=>"OR"}!)
+
+          d.emit({'id' => '12345678-1234-1234-1234-123456789001', 'timestamp' => 1409534625001, 'key' => 'val'}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789002', 'timestamp' => 1409534625002, 'key' => 'val'}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789003', 'timestamp' => 1409534625003, 'key' => 'val'}, time)
+        end
+
+        expect(select_all).to match_array [
+          {"id"=>"12345678-1234-1234-1234-123456789001", "timestamp"=>1409534625001},
+          {"id"=>"12345678-1234-1234-1234-123456789002", "timestamp"=>1409534625002},
+          {"id"=>"12345678-1234-1234-1234-123456789003", "timestamp"=>1409534625003},
+        ]
+      end
+    }
+
+    context('with condition (2)') {
+      it do
+        run_driver do |d|
+          expect(d.instance.log).not_to receive(:warn)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789001', 'timestamp' => 1409534625001, 'key' => 'val'}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789002', 'timestamp' => 1409534625002, 'key' => 'val'}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789003', 'timestamp' => 1409534625003, 'key' => 'val'}, time)
+        end
+
+        expect(select_all).to match_array [
+          {"id"=>"12345678-1234-1234-1234-123456789001", "timestamp"=>1409534625001, 'key' => 'val'},
+          {"id"=>"12345678-1234-1234-1234-123456789002", "timestamp"=>1409534625002, 'key' => 'val'},
+          {"id"=>"12345678-1234-1234-1234-123456789003", "timestamp"=>1409534625003, 'key' => 'val'},
+        ]
+
+        run_driver(:expected => 'timestamp LE ${timestamp},key EQ "val"') do |d|
+          expect(d.instance.log).not_to receive(:warn)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789001', 'timestamp' => 1409534625004, 'key' => 'val2'}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789002', 'timestamp' => 1409534625005, 'key' => 'val2'}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789003', 'timestamp' => 1409534625006, 'key' => 'val2'}, time)
+        end
+
+        expect(select_all).to match_array [
+          {"id"=>"12345678-1234-1234-1234-123456789001", "timestamp"=>1409534625004, 'key' => 'val2'},
+          {"id"=>"12345678-1234-1234-1234-123456789002", "timestamp"=>1409534625005, 'key' => 'val2'},
+          {"id"=>"12345678-1234-1234-1234-123456789003", "timestamp"=>1409534625006, 'key' => 'val2'},
+        ]
+      end
+
+      it do
+        run_driver do |d|
+          expect(d.instance.log).not_to receive(:warn)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789001', 'timestamp' => 1409534625001, 'key' => 'val3'}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789002', 'timestamp' => 1409534625002, 'key' => 'val3'}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789003', 'timestamp' => 1409534625003, 'key' => 'val3'}, time)
+        end
+
+        expect(select_all).to match_array [
+          {"id"=>"12345678-1234-1234-1234-123456789001", "timestamp"=>1409534625001, 'key' => 'val3'},
+          {"id"=>"12345678-1234-1234-1234-123456789002", "timestamp"=>1409534625002, 'key' => 'val3'},
+          {"id"=>"12345678-1234-1234-1234-123456789003", "timestamp"=>1409534625003, 'key' => 'val3'},
+        ]
+
+        run_driver(:expected => 'timestamp LE ${timestamp},key EQ "val"') do |d|
+          expect(d.instance.log).to receive(:warn)
+            .with(%!The conditional request failed: {:table_name=>"#{TEST_TABLE_NAME}", :item=>{"id"=>"12345678-1234-1234-1234-123456789001", "timestamp"=>1409534625004, "key"=>"val2"}, :expected=>{"timestamp"=>{:comparison_operator=>"LE", :attribute_value_list=>[1409534625004]}, "key"=>{:comparison_operator=>"EQ", :attribute_value_list=>["val"]}}, :conditional_operator=>"AND"}!)
+          expect(d.instance.log).to receive(:warn)
+            .with(%!The conditional request failed: {:table_name=>"#{TEST_TABLE_NAME}", :item=>{"id"=>"12345678-1234-1234-1234-123456789002", "timestamp"=>1409534625005, "key"=>"val2"}, :expected=>{"timestamp"=>{:comparison_operator=>"LE", :attribute_value_list=>[1409534625005]}, "key"=>{:comparison_operator=>"EQ", :attribute_value_list=>["val"]}}, :conditional_operator=>"AND"}!)
+          expect(d.instance.log).to receive(:warn)
+            .with(%!The conditional request failed: {:table_name=>"#{TEST_TABLE_NAME}", :item=>{"id"=>"12345678-1234-1234-1234-123456789003", "timestamp"=>1409534625006, "key"=>"val2"}, :expected=>{"timestamp"=>{:comparison_operator=>"LE", :attribute_value_list=>[1409534625006]}, "key"=>{:comparison_operator=>"EQ", :attribute_value_list=>["val"]}}, :conditional_operator=>"AND"}!)
+
+          d.emit({'id' => '12345678-1234-1234-1234-123456789001', 'timestamp' => 1409534625004, 'key' => 'val2'}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789002', 'timestamp' => 1409534625005, 'key' => 'val2'}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789003', 'timestamp' => 1409534625006, 'key' => 'val2'}, time)
+        end
+
+        expect(select_all).to match_array [
+          {"id"=>"12345678-1234-1234-1234-123456789001", "timestamp"=>1409534625001, 'key' => 'val3'},
+          {"id"=>"12345678-1234-1234-1234-123456789002", "timestamp"=>1409534625002, 'key' => 'val3'},
+          {"id"=>"12345678-1234-1234-1234-123456789003", "timestamp"=>1409534625003, 'key' => 'val3'},
+        ]
+      end
+
+      it do
+        run_driver do |d|
+          expect(d.instance.log).not_to receive(:warn)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789001', 'timestamp' => 1409534625001, 'key' => 'val3'}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789002', 'timestamp' => 1409534625002, 'key' => 'val3'}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789003', 'timestamp' => 1409534625003, 'key' => 'val3'}, time)
+        end
+
+        expect(select_all).to match_array [
+          {"id"=>"12345678-1234-1234-1234-123456789001", "timestamp"=>1409534625001, 'key' => 'val3'},
+          {"id"=>"12345678-1234-1234-1234-123456789002", "timestamp"=>1409534625002, 'key' => 'val3'},
+          {"id"=>"12345678-1234-1234-1234-123456789003", "timestamp"=>1409534625003, 'key' => 'val3'},
+        ]
+
+        run_driver(:expected => 'timestamp LE ${timestamp},key EQ "val"', :conditional_operator => 'OR') do |d|
+          expect(d.instance.log).to_not receive(:warn)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789001', 'timestamp' => 1409534625004, 'key' => 'val2'}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789002', 'timestamp' => 1409534625005, 'key' => 'val2'}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789003', 'timestamp' => 1409534625006, 'key' => 'val2'}, time)
+        end
+
+        expect(select_all).to match_array [
+          {"id"=>"12345678-1234-1234-1234-123456789001", "timestamp"=>1409534625004, 'key' => 'val2'},
+          {"id"=>"12345678-1234-1234-1234-123456789002", "timestamp"=>1409534625005, 'key' => 'val2'},
+          {"id"=>"12345678-1234-1234-1234-123456789003", "timestamp"=>1409534625006, 'key' => 'val2'},
+        ]
+      end
+    }
+  }
 end

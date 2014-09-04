@@ -4,7 +4,7 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 
 Gem::Specification.new do |spec|
   spec.name          = 'fluent-plugin-dynamodb-alt'
-  spec.version       = '0.0.1'
+  spec.version       = '0.1.0'
   spec.authors       = ['Genki Sugawara']
   spec.email         = ['sgwr_dts@yahoo.co.jp']
   spec.summary       = %q{Fluent plugin to output to DynamoDB.}
@@ -24,4 +24,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rake', '~> 10.0'
   spec.add_development_dependency 'rspec', '>= 3.0.0'
   spec.add_development_dependency 'hashie'
+  spec.add_development_dependency 'ddbcli'
 end

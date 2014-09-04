@@ -68,7 +68,7 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
   def start
     super
 
-    @client = Aws::DynamoDB::Client.new
+    @client = create_client
   end
 
   def format(tag, time, record)
@@ -76,7 +76,7 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
   end
 
   def write(chunk)
-    chunk = aggregate_sessions(chunk)
+    chunk = aggregate_records(chunk)
     block = proc do |tag, time, record|
       put_record(record)
     end
@@ -143,7 +143,11 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
           record_key = $1.inspect
           val = eval("proc {|record| record[#{record_key}] }")
         else
-          val = JSON.parse("[#{val}]").first if val
+          begin
+            val = JSON.parse("[#{val}]").first if val
+          rescue JSON::ParserError => e
+            raise "Cannot parse the expected expression (#{expr}): #{e.message}"
+          end
         end
       end
 
@@ -176,7 +180,7 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
     return attrs
   end
 
-  def aggregate_sessions(chunk)
+  def aggregate_records(chunk)
     chunk.enum_for(:msgpack_each).chunk {|tag, time, record|
       if @range_key
         record.values_at(@hash_key, @range_key)
