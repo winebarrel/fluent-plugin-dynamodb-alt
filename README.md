@@ -2,6 +2,13 @@
 
 Alternative fluent plugin to output to DynamoDB.
 
+## Features
+
+* Use [PutItem](http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_PutItem.html) Acrion
+* Sort the records in the timestamp key.
+* Aggregate the records in the primary key.
+* Support [Expected constraint](http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_PutItem.html#DDB-PutItem-request-Expected)
+
 [![Gem Version](https://badge.fury.io/rb/fluent-plugin-dynamodb-alt.png)](http://badge.fury.io/rb/fluent-plugin-dynamodb-alt)
 [![Build Status](https://travis-ci.org/winebarrel/fluent-plugin-dynamodb-alt.svg)](https://travis-ci.org/winebarrel/fluent-plugin-dynamodb-alt)
 
