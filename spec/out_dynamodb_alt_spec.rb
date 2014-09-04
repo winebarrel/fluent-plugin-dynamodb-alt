@@ -9,7 +9,8 @@ describe Fluent::DynamodbAltOutput do
       expect(driver.instance).to receive(:configure_aws).with(
         :access_key_id     => "AKIAIOSFODNN7EXAMPLE",
         :secret_access_key => "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-        :region            => "ap-northeast-1")
+        :region            => "ap-northeast-1",
+        :endpoint          => "http:://localhost:4567")
 
       expect(driver.instance).to receive(:create_client) {
         client = double('client')
@@ -28,6 +29,7 @@ describe Fluent::DynamodbAltOutput do
         aws_key_id AKIAIOSFODNN7EXAMPLE
         aws_sec_key wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
         region ap-northeast-1
+        endpoint http:://localhost:4567
         table_name my_table
         timestamp_key timestamp
         concurrency 2
@@ -36,6 +38,8 @@ describe Fluent::DynamodbAltOutput do
 
       expect(driver.instance.aws_key_id          ).to eq 'AKIAIOSFODNN7EXAMPLE'
       expect(driver.instance.aws_sec_key         ).to eq 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY'
+      expect(driver.instance.region              ).to eq 'ap-northeast-1'
+      expect(driver.instance.endpoint            ).to eq 'http:://localhost:4567'
       expect(driver.instance.table_name          ).to eq 'my_table'
       expect(driver.instance.timestamp_key       ).to eq 'timestamp'
       expect(driver.instance.concurrency         ).to eq 2

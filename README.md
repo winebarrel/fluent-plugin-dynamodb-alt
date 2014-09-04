@@ -29,6 +29,7 @@ bundle exec rake install
   region ap-northeast-1
   table_name my_table
   timestamp_key timestamp
+  #endpoint http:://localhost:4567
   #concurrency 1
 
   # see http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_PutItem.html#DDB-PutItem-request-Expected

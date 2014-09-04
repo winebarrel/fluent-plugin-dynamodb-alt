@@ -13,6 +13,7 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
   config_param :aws_key_id,           :string,  :default => nil
   config_param :aws_sec_key,          :string,  :default => nil
   config_param :region,               :string,  :default => nil
+  config_param :endpoint,             :string,  :default => nil
   config_param :table_name,           :string
   config_param :timestamp_key,        :string
   config_param :concurrency,          :integer, :default => 1
@@ -43,6 +44,7 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
     aws_opts[:access_key_id] = @aws_key_id if @aws_key_id
     aws_opts[:secret_access_key] = @aws_sec_key if @aws_sec_key
     aws_opts[:region] = @region if @region
+    aws_opts[:endpoint] = @endpoint if @endpoint
 
     configure_aws(aws_opts)
 
