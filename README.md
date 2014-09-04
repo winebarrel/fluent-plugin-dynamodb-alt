@@ -1,6 +1,9 @@
 # fluent-plugin-dynamodb-alt
 
-Fluent plugin to output to DynamoDB.
+Alternative fluent plugin to output to DynamoDB.
+
+[![Gem Version](https://badge.fury.io/rb/fluent-plugin-dynamodb-alt.png)](http://badge.fury.io/rb/fluent-plugin-dynamodb-alt)
+[![Build Status](https://travis-ci.org/winebarrel/fluent-plugin-dynamodb-alt.svg)](https://travis-ci.org/winebarrel/fluent-plugin-dynamodb-alt)
 
 ## Installation
 
