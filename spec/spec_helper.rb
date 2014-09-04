@@ -1,7 +1,10 @@
 require 'fluent/test'
 require 'fluent/plugin/out_dynamodb_alt'
+require 'base64'
 require 'hashie'
+require 'msgpack'
 require 'securerandom'
+require 'stringio'
 
 DRIVER_DEFAULT_TAG = 'test.default'
 TEST_TABLE_NAME = 'my_table-' + SecureRandom.uuid

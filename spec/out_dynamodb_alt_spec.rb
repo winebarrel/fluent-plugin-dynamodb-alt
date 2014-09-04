@@ -32,6 +32,7 @@ describe Fluent::DynamodbAltOutput do
         endpoint http:://localhost:4567
         table_name my_table
         timestamp_key timestamp
+        binary_keys aaa,bbb
         concurrency 2
         conditional_operator OR
       EOS
@@ -42,6 +43,7 @@ describe Fluent::DynamodbAltOutput do
       expect(driver.instance.endpoint            ).to eq 'http:://localhost:4567'
       expect(driver.instance.table_name          ).to eq 'my_table'
       expect(driver.instance.timestamp_key       ).to eq 'timestamp'
+      expect(driver.instance.binary_keys         ).to eq ['aaa', 'bbb']
       expect(driver.instance.concurrency         ).to eq 2
       expect(driver.instance.conditional_operator).to eq 'OR'
       expect(driver.instance.instance_variable_get(:@hash_key) ).to eq 'hash_key'
@@ -67,10 +69,34 @@ describe Fluent::DynamodbAltOutput do
         type dynamodb_alt
         table_name my_table
         timestamp_key timestamp
+      EOS
+
+      expect(driver.instance.binary_keys).to eq []
+    end
+
+    it do
+      driver = create_driver
+      allow(driver.instance).to receive(:configure_aws)
+
+      allow(driver.instance).to receive(:create_client) {
+        client = double('client')
+        allow(client).to receive(:describe_table) {
+          Hashie::Mash.new(:table => {
+            :key_schema => [
+              {:key_type => 'HASH',  :attribute_name => 'hash_key'},
+            ]})
+        }
+        client
+      }
+
+      driver.configure(<<-EOS)
+        type dynamodb_alt
+        table_name my_table
+        timestamp_key timestamp
         expected timestamp GE 0,key LT 100
       EOS
 
-      expected = driver.instance.instance_variable_get(:@expected)
+      expected = driver.instance.expected
       expect(expected).to eq [["timestamp", "GE", 0],["key", "LT", 100]]
     end
 
@@ -96,7 +122,7 @@ describe Fluent::DynamodbAltOutput do
         expected id NULL,timestamp LT ${ts},key EQ ${k}
       EOS
 
-      expected = driver.instance.instance_variable_get(:@expected)
+      expected = driver.instance.expected
 
       expect(expected[0]).to eq ["id", "NULL", nil]
 
@@ -158,7 +184,7 @@ describe Fluent::DynamodbAltOutput do
         expected key1 EQ "str",key2 EQ 1
       EOS
 
-      expected = driver.instance.instance_variable_get(:@expected)
+      expected = driver.instance.expected
       expect(expected).to eq [["key1", "EQ", "str"], ["key2", "EQ", 1]]
     end
   }
@@ -428,6 +454,29 @@ describe Fluent::DynamodbAltOutput do
           d.emit({'id' => '12345678-1234-1234-1234-123456789003', 'timestamp' => 1409534625002}, time)
           d.emit({'id' => '12345678-1234-1234-1234-123456789003', 'timestamp' => 1409534625001}, time)
         end
+      end
+    }
+
+    context('binary') {
+      it do
+        run_driver(:binary_keys => 'data') do |d|
+          d.emit({'id' => '12345678-1234-1234-1234-123456789001', 'timestamp' => 1409534625001, 'data' => MessagePack.pack({'foo' => 100, 'bar' => 'Zzz...'})}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789002', 'timestamp' => 1409534625002, 'data' => MessagePack.pack({'foo' => 200, 'bar' => 'Zzz..'})}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789003', 'timestamp' => 1409534625003, 'data' => MessagePack.pack({'foo' => 300, 'bar' => 'Zzz.'})}, time)
+        end
+
+        rows = select_all.map do |row|
+          data = row['data']
+          data = Base64.strict_decode64(data)
+          row['data'] = MessagePack.unpack(data)
+          row
+        end
+
+        expect(rows).to match_array [
+          {"id"=>"12345678-1234-1234-1234-123456789001", "timestamp"=>1409534625001, "data" => {'foo' => 100, 'bar' => 'Zzz...'}},
+          {"id"=>"12345678-1234-1234-1234-123456789002", "timestamp"=>1409534625002, "data" => {'foo' => 200, 'bar' => 'Zzz..'}},
+          {"id"=>"12345678-1234-1234-1234-123456789003", "timestamp"=>1409534625003, "data" => {'foo' => 300, 'bar' => 'Zzz.'}},
+        ]
       end
     }
   }

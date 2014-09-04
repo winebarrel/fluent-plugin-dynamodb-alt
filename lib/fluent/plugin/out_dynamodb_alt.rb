@@ -16,6 +16,7 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
   config_param :endpoint,             :string,  :default => nil
   config_param :table_name,           :string
   config_param :timestamp_key,        :string
+  config_param :binary_keys,          :string,  :default => nil
   config_param :concurrency,          :integer, :default => 1
   config_param :expected,             :string,  :default => nil
   config_param :conditional_operator, :string,  :default => 'AND'
@@ -27,6 +28,7 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
     super
     require 'aws-sdk-core'
     require 'parallel'
+    require 'stringio'
   end
 
   def configure(conf)
@@ -66,6 +68,12 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
       @expected = parse_expected(@expected)
       log.info("dynamodb_alt expected: #{@expected.inspect}")
     end
+
+    if @binary_keys
+      @binary_keys = @binary_keys.strip.split(/\s*,\s*/)
+    else
+      @binary_keys = []
+    end
   end
 
   def start
@@ -102,6 +110,8 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
   end
 
   def put_record(record)
+    convert_binary!(record)
+
     item = {
       :table_name => @table_name,
       :item => record
@@ -200,5 +210,14 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
         record[@timestamp_key]
       }.last
     }
+  end
+
+  def convert_binary!(record)
+    @binary_keys.each do |key|
+      val = record[key]
+      record[key] = StringIO.new(val) if val
+    end
+
+    return record
   end
 end
