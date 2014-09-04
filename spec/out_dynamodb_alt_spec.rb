@@ -344,5 +344,27 @@ describe Fluent::DynamodbAltOutput do
         ]
       end
     }
+
+    context('key dose not exist') {
+      it do
+        run_driver do |d|
+          expect(d.instance.log).to receive(:warn)
+            .with(%!Hash Key 'id' does not exist in the record: {"timestamp"=>1409534625001, "key"=>"val"}!)
+          d.emit({'timestamp' => 1409534625001, 'key' => 'val'}, time)
+        end
+
+        expect(select_all).to match_array []
+      end
+
+      it do
+        run_driver do |d|
+          expect(d.instance.log).to receive(:warn)
+            .with(%!Timestamp Key 'timestamp' does not exist in the record: {"id"=>"12345678-1234-1234-1234-123456789001", "key"=>"val"}!)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789001', 'key' => 'val'}, time)
+        end
+
+        expect(select_all).to match_array []
+      end
+    }
   }
 end

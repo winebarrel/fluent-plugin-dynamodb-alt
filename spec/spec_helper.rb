@@ -33,7 +33,9 @@ def create_driver(tag = DRIVER_DEFAULT_TAG)
 end
 
 def run_driver(options = {})
-  options = options.dup
+  options = {
+    :flush_interval => 0
+  }.merge(options.dup)
 
   additional_options = options.map {|key, value|
     "#{key} #{value}"
@@ -45,7 +47,7 @@ def run_driver(options = {})
     aws_sec_key #{TEST_AWS_SEC_KEY}
     region #{TEST_REGION}
     table_name #{TEST_TABLE_NAME}
-    flush_interval 0
+    timestamp_key timestamp
     #{additional_options}
   EOS
 

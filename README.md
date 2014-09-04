@@ -28,7 +28,7 @@ bundle exec rake install
   #expected id NULL,timestamp LT ${timestamp},key EQ "val"
   #conditional_operator OR
 
-  #include_time_key true
-  #include_tag_key true
+  #include_time_key false
+  #include_tag_key false
 </match>
 ```

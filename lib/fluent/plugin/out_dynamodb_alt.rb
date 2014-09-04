@@ -100,24 +100,22 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
   end
 
   def put_record(record)
-    if validate_record(record)
-      item = {
-        :table_name => @table_name,
-        :item => record
-      }
+    item = {
+      :table_name => @table_name,
+      :item => record
+    }
 
-      begin
-        if @expected
-          expected = create_expected(record)
-          return unless expected
-          item[:expected] = expected
-          item[:conditional_operator] = @conditional_operator if expected.length > 1
-        end
-
-        @client.put_item(item)
-      rescue Aws::DynamoDB::Errors::ConditionalCheckFailedException, Aws::DynamoDB::Errors::ValidationException => e
-        log.warn("#{e.message}: #{item.inspect}")
+    begin
+      if @expected
+        expected = create_expected(record)
+        return unless expected
+        item[:expected] = expected
+        item[:conditional_operator] = @conditional_operator if expected.length > 1
       end
+
+      @client.put_item(item)
+    rescue Aws::DynamoDB::Errors::ConditionalCheckFailedException, Aws::DynamoDB::Errors::ValidationException => e
+      log.warn("#{e.message}: #{item.inspect}")
     end
   end
 
@@ -129,6 +127,11 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
 
     if @range_key and not record[@range_key]
       log.warn("Range Key '#{@range_key}' does not exist in the record: #{record.inspect}")
+      return false
+    end
+
+    if not record[@timestamp_key]
+      log.warn("Timestamp Key '#{@timestamp_key}' does not exist in the record: #{record.inspect}")
       return false
     end
 
@@ -182,7 +185,9 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
   end
 
   def aggregate_records(chunk)
-    chunk.enum_for(:msgpack_each).chunk {|tag, time, record|
+    chunk.enum_for(:msgpack_each).select {|tag, time, record|
+      validate_record(record)
+    }.chunk {|tag, time, record|
       if @range_key
         record.values_at(@hash_key, @range_key)
       else
