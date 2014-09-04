@@ -29,6 +29,7 @@ bundle exec rake install
   region ap-northeast-1
   table_name my_table
   timestamp_key timestamp
+  #binary_keys data1,data2
   #endpoint http:://localhost:4567
   #concurrency 1
 
