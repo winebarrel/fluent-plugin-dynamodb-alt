@@ -189,6 +189,22 @@ describe Fluent::DynamodbAltOutput do
       end
     }
 
+    context('concurrency > 1') {
+      it do
+        run_driver(:concurrency => 2) do |d|
+          d.emit({'id' => '12345678-1234-1234-1234-123456789001', 'timestamp' => 1409534625001}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789002', 'timestamp' => 1409534625002}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789003', 'timestamp' => 1409534625003}, time)
+        end
+
+        expect(select_all).to match_array [
+          {"id"=>"12345678-1234-1234-1234-123456789001", "timestamp"=>1409534625001},
+          {"id"=>"12345678-1234-1234-1234-123456789002", "timestamp"=>1409534625002},
+          {"id"=>"12345678-1234-1234-1234-123456789003", "timestamp"=>1409534625003},
+        ]
+      end
+    }
+
     context('with condition (1)') {
       it do
         run_driver(:expected => 'id NULL,timestamp LT ${timestamp}', :conditional_operator => 'OR') do |d|
