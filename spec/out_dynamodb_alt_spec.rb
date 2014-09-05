@@ -502,5 +502,90 @@ describe Fluent::DynamodbAltOutput do
         ]
       end
     }
+
+    context('delete record (1)') {
+      it do
+        run_driver do |d|
+          d.emit({'id' => '12345678-1234-1234-1234-123456789001', 'timestamp' => 1409534625001}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789002', 'timestamp' => 1409534625002}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789003', 'timestamp' => 1409534625003}, time)
+        end
+
+        expect(select_all).to match_array [
+          {"id"=>"12345678-1234-1234-1234-123456789001", "timestamp"=>1409534625001},
+          {"id"=>"12345678-1234-1234-1234-123456789002", "timestamp"=>1409534625002},
+          {"id"=>"12345678-1234-1234-1234-123456789003", "timestamp"=>1409534625003},
+        ]
+
+        run_driver(:expected => 'id NULL,timestamp LT ${timestamp}', :conditional_operator => 'OR', :delete_key => 'delete') do |d|
+          expect(d.instance.log).not_to receive(:warn)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789001', 'timestamp' => 1409534625004, 'delete' => true}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789002', 'timestamp' => 1409534625005, 'key' => 'val'}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789003', 'timestamp' => 1409534625006, 'delete' => true}, time)
+        end
+
+        expect(select_all).to match_array [
+          {"id"=>"12345678-1234-1234-1234-123456789002", "timestamp"=>1409534625005, 'key' => 'val'},
+        ]
+      end
+    }
+
+    context('delete record (2)') {
+      it do
+        run_driver do |d|
+          d.emit({'id' => '12345678-1234-1234-1234-123456789001', 'timestamp' => 1409534625001}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789002', 'timestamp' => 1409534625002}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789003', 'timestamp' => 1409534625003}, time)
+        end
+
+        expect(select_all).to match_array [
+          {"id"=>"12345678-1234-1234-1234-123456789001", "timestamp"=>1409534625001},
+          {"id"=>"12345678-1234-1234-1234-123456789002", "timestamp"=>1409534625002},
+          {"id"=>"12345678-1234-1234-1234-123456789003", "timestamp"=>1409534625003},
+        ]
+
+        run_driver(:expected => 'id NULL,timestamp LT ${timestamp}', :conditional_operator => 'OR', :delete_key => 'delete') do |d|
+          expect(d.instance.log).to receive(:warn)
+            .with(%!The conditional request failed: {:table_name=>"#{TEST_TABLE_NAME}", :key=>{"id"=>"12345678-1234-1234-1234-123456789001"}, :expected=>{"id"=>{:comparison_operator=>"NULL"}, "timestamp"=>{:comparison_operator=>"LT", :attribute_value_list=>[1409534625001]}}, :conditional_operator=>"OR"}!)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789001', 'timestamp' => 1409534625001, 'delete' => true}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789002', 'timestamp' => 1409534625005, 'key' => 'val'}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789003', 'timestamp' => 1409534625006, 'delete' => true}, time)
+        end
+
+        expect(select_all).to match_array [
+          {"id"=>"12345678-1234-1234-1234-123456789001", "timestamp"=>1409534625001},
+          {"id"=>"12345678-1234-1234-1234-123456789002", "timestamp"=>1409534625005, 'key' => 'val'},
+        ]
+      end
+    }
+
+    context('delete empty record') {
+      it do
+        run_driver do |d|
+          d.emit({'id' => '12345678-1234-1234-1234-123456789001', 'timestamp' => 1409534625001}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789002', 'timestamp' => 1409534625002}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789003', 'timestamp' => 1409534625003}, time)
+        end
+
+        expect(select_all).to match_array [
+          {"id"=>"12345678-1234-1234-1234-123456789001", "timestamp"=>1409534625001},
+          {"id"=>"12345678-1234-1234-1234-123456789002", "timestamp"=>1409534625002},
+          {"id"=>"12345678-1234-1234-1234-123456789003", "timestamp"=>1409534625003},
+        ]
+
+        run_driver(:expected => 'id NULL,timestamp LT ${timestamp}', :conditional_operator => 'OR', :delete_key => 'delete') do |d|
+          expect(d.instance.log).not_to receive(:warn)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789011', 'timestamp' => 1409534625004, 'delete' => true}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789002', 'timestamp' => 1409534625005, 'key' => 'val'}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789013', 'timestamp' => 1409534625006, 'delete' => true}, time)
+        end
+
+        expect(select_all).to match_array [
+          {"id"=>"12345678-1234-1234-1234-123456789001", "timestamp"=>1409534625001},
+          {"id"=>"12345678-1234-1234-1234-123456789002", "timestamp"=>1409534625005, 'key' => 'val'},
+          {"id"=>"12345678-1234-1234-1234-123456789003", "timestamp"=>1409534625003},
+        ]
+      end
+    }
   }
 end

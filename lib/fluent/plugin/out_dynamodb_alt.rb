@@ -90,8 +90,13 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
 
   def write(chunk)
     chunk = aggregate_records(chunk)
+
     block = proc do |tag, time, record|
-      put_record(record)
+      if @delete_key and record[@delete_key]
+        delete_record(record)
+      else
+        put_record(record)
+      end
     end
 
     if @concurrency > 1
@@ -129,6 +134,29 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
       end
 
       @client.put_item(item)
+    rescue Aws::DynamoDB::Errors::ConditionalCheckFailedException, Aws::DynamoDB::Errors::ValidationException => e
+      log.warn("#{e.message}: #{item.inspect}")
+    end
+  end
+
+  def delete_record(record)
+    key = {@hash_key => record[@hash_key]}
+    key[@range_key] = record[@range_key] if @range_key
+
+    item = {
+      :table_name => @table_name,
+      :key => key
+    }
+
+    begin
+      if @expected
+        expected = create_expected(record)
+        return unless expected
+        item[:expected] = expected
+        item[:conditional_operator] = @conditional_operator if expected.length > 1
+      end
+
+      @client.delete_item(item)
     rescue Aws::DynamoDB::Errors::ConditionalCheckFailedException, Aws::DynamoDB::Errors::ValidationException => e
       log.warn("#{e.message}: #{item.inspect}")
     end
