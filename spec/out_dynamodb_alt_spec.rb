@@ -35,6 +35,7 @@ describe Fluent::DynamodbAltOutput do
         binary_keys aaa,bbb
         concurrency 2
         conditional_operator OR
+        delete_key delete
       EOS
 
       expect(driver.instance.aws_key_id          ).to eq 'AKIAIOSFODNN7EXAMPLE'
@@ -46,6 +47,7 @@ describe Fluent::DynamodbAltOutput do
       expect(driver.instance.binary_keys         ).to eq ['aaa', 'bbb']
       expect(driver.instance.concurrency         ).to eq 2
       expect(driver.instance.conditional_operator).to eq 'OR'
+      expect(driver.instance.delete_key          ).to eq 'delete'
       expect(driver.instance.instance_variable_get(:@hash_key) ).to eq 'hash_key'
       expect(driver.instance.instance_variable_get(:@range_key)).to eq 'range_key'
     end
