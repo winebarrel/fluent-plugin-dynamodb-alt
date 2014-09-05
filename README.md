@@ -32,6 +32,7 @@ bundle exec rake install
   #binary_keys data1,data2
   #endpoint http:://localhost:4567
   #concurrency 1
+  #delete_key delete
 
   # see http://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_PutItem.html#DDB-PutItem-request-Expected
   #expected id NULL,timestamp LT ${timestamp},key EQ "val"
