@@ -479,5 +479,26 @@ describe Fluent::DynamodbAltOutput do
         ]
       end
     }
+
+    context('set') {
+      it do
+        run_driver do |d|
+          d.emit({'id' => '12345678-1234-1234-1234-123456789001', 'timestamp' => 1409534625001, 'set' => [1, 2, 3]}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789002', 'timestamp' => 1409534625002, 'set' => ['1', '2', '3']}, time)
+          d.emit({'id' => '12345678-1234-1234-1234-123456789003', 'timestamp' => 1409534625003, 'set' => ['A', 'B', 'C']}, time)
+        end
+
+        rows = select_all.map do |row|
+          row['set'].sort!
+          row
+        end
+
+        expect(rows).to match_array [
+          {"id"=>"12345678-1234-1234-1234-123456789001", "timestamp"=>1409534625001, "set"=>[1, 2, 3]},
+          {"id"=>"12345678-1234-1234-1234-123456789002", "timestamp"=>1409534625002, "set"=>['1', '2', '3']},
+          {"id"=>"12345678-1234-1234-1234-123456789003", "timestamp"=>1409534625003, "set"=>['A', 'B', 'C']},
+        ]
+      end
+    }
   }
 end

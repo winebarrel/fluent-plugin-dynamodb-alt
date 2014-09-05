@@ -28,6 +28,7 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
     super
     require 'aws-sdk-core'
     require 'parallel'
+    require 'set'
     require 'stringio'
   end
 
@@ -111,6 +112,7 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
 
   def put_record(record)
     convert_binary!(record)
+    convert_set!(record)
 
     item = {
       :table_name => @table_name,
@@ -216,6 +218,16 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
     @binary_keys.each do |key|
       val = record[key]
       record[key] = StringIO.new(val) if val
+    end
+
+    return record
+  end
+
+  def convert_set!(record)
+    record.each do |key, val|
+      if val.kind_of?(Array)
+        record[key] = Set.new(val)
+      end
     end
 
     return record
