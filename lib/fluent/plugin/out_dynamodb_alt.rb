@@ -22,8 +22,8 @@ class Fluent::DynamodbAltOutput < Fluent::BufferedOutput
   config_param :expected,             :string,  :default => nil
   config_param :conditional_operator, :string,  :default => 'AND'
 
-  config_set_default :include_time_key, true
-  config_set_default :include_tag_key,  true
+  config_set_default :include_time_key, false
+  config_set_default :include_tag_key,  false
 
   def initialize
     super
